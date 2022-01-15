@@ -49,7 +49,7 @@ impl Directory {
                 for entry in entries {
                     let file_extension = entry
                         .extension()
-                        .or(Some(std::ffi::OsStr::new("")))
+                        .or_else(|| Some(std::ffi::OsStr::new("")))
                         .unwrap();
                     if !entry.is_dir() && file_extension == extension {
                         list.push(entry);
