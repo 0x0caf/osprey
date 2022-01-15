@@ -23,18 +23,18 @@ pub enum SyntaxErrorMessage {
 impl fmt::Display for SyntaxErrorMessage {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            &SyntaxErrorMessage::NoTagNameGiven => write!(f, "No tag name given"),
-            &SyntaxErrorMessage::QueryGivenNoTag => write!(f, "Query defined without tag name"),
-            &SyntaxErrorMessage::TagNameIncompleteQuery => {
+            SyntaxErrorMessage::NoTagNameGiven => write!(f, "No tag name given"),
+            SyntaxErrorMessage::QueryGivenNoTag => write!(f, "Query defined without tag name"),
+            SyntaxErrorMessage::TagNameIncompleteQuery => {
                 write!(f, "Tag name defined without completing previous query")
             }
-            &SyntaxErrorMessage::NoQueryForTag => write!(f, "No query given for tag"),
-            &SyntaxErrorMessage::CouldNotParseTagName => write!(f, "Could not parse tag name"),
-            &SyntaxErrorMessage::CommentInQuery => write!(f, "Comment found while defining query"),
-            &SyntaxErrorMessage::EOFIncompleteQuery => {
+            SyntaxErrorMessage::NoQueryForTag => write!(f, "No query given for tag"),
+            SyntaxErrorMessage::CouldNotParseTagName => write!(f, "Could not parse tag name"),
+            SyntaxErrorMessage::CommentInQuery => write!(f, "Comment found while defining query"),
+            SyntaxErrorMessage::EOFIncompleteQuery => {
                 write!(f, "End of file found: unfinished query")
             }
-            &SyntaxErrorMessage::NoQueriesFound => write!(f, "No queries found"),
+            SyntaxErrorMessage::NoQueriesFound => write!(f, "No queries found"),
         }
     }
 }
@@ -88,7 +88,7 @@ impl SQLFile {
 
             return Err(SQLFileError::CouldNoReadFile);
         }
-        return Err(SQLFileError::CouldNotGetFilename);
+        Err(SQLFileError::CouldNotGetFilename)
     }
 
     fn file_stem<P>(path: P) -> Option<String>
@@ -105,7 +105,7 @@ impl SQLFile {
         let mut query_hash_map = HashMap::new();
         let mut current_query_set = QueryReadState::new();
         let mut line_count = 0;
-        let lines = text.split("\n");
+        let lines = text.split('\n');
 
         for line in lines {
             let file_line = FileLine::new(line);
@@ -130,14 +130,14 @@ impl SQLFile {
                     ));
                 }
 
-                if tag_name.len() > 0 && current_query_set.is_empty() {
+                if !tag_name.is_empty() && current_query_set.is_empty() {
                     return Err(SQLFileError::SyntaxError(
                         line_count,
                         SyntaxErrorMessage::NoQueryForTag,
                     ));
                 }
 
-                if tag_name.len() > 0 && !current_query_set.is_empty() {
+                if !tag_name.is_empty() && !current_query_set.is_empty() {
                     let query_set = current_query_set.compute_hash().to_query_set();
                     query_hash_map.insert(tag_name, query_set);
                     current_query_set = QueryReadState::new();
@@ -168,7 +168,7 @@ impl SQLFile {
             if file_line.is_query_string() {
                 current_query_set.add_query_string(file_line.original_line.as_str());
             }
-            line_count = line_count + 1;
+            line_count += 1;
         }
 
         if current_query_set.has_unfinished_query() {
@@ -227,7 +227,7 @@ impl FileLine {
     pub fn get_tag_name(&self) -> Option<String> {
         let indicies: Vec<_> = self.line.match_indices(TAG_LINE).collect();
         let tag_line_len = TAG_LINE.len();
-        if indicies.len() > 0 {
+        if !indicies.is_empty() {
             let first_index = indicies[0].0;
             let begin = first_index + tag_line_len;
             let mut tag = String::new();
@@ -254,7 +254,7 @@ impl FileLine {
     }
 
     pub fn is_finishing_query(&self) -> bool {
-        self.is_query_string() && self.line.ends_with(";")
+        self.is_query_string() && self.line.ends_with(';')
     }
 }
 
@@ -282,8 +282,8 @@ impl QueryReadState {
     }
 
     fn add_query_string(&mut self, st: &str) {
-        if self.current_query.len() > 0 {
-            self.current_query.push_str("\n");
+        if !self.current_query.is_empty() {
+            self.current_query.push('\n');
         }
         self.current_query.push_str(st);
     }

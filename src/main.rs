@@ -127,10 +127,10 @@ impl Osprey {
                 // execute all queries in the set with given tag
                 for query in up_query.queries.iter() {
                     app_context.database_client.batch_execute(query)?;
-                    executed_queries = executed_queries + 1;
+                    executed_queries += 1;
                 }
 
-                executed_query_sets = executed_query_sets + 1;
+                executed_query_sets += 1;
 
                 // record migration
                 app_context.migration_table.add_migration(
@@ -160,10 +160,7 @@ impl Osprey {
             .map_err(|e| SanityError::GeneralError(e.to_string()))?;
 
         for file in app_context.sql_sets.iter() {
-            let filtered = migration_instances
-                .iter()
-                .filter(|x| x.name == file.name)
-                .into_iter();
+            let filtered = migration_instances.iter().filter(|x| x.name == file.name);
             let mut count = 0;
 
             // see if this migration set has already happened
