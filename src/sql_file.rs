@@ -63,63 +63,6 @@ impl fmt::Display for SQLFileError {
     }
 }
 
-#[derive(Debug)]
-pub struct FileLine {
-    line: String,
-    original_line: String,
-}
-
-impl FileLine {
-    pub fn new(line: &str) -> FileLine {
-        let new_line = line.trim().to_string();
-        FileLine {
-            line: new_line,
-            original_line: line.to_string(),
-        }
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.line.is_empty()
-    }
-
-    pub fn is_tag_name(&self) -> bool {
-        self.line.starts_with("--") && self.line.contains(TAG_LINE)
-    }
-
-    pub fn get_tag_name(&self) -> Option<String> {
-        let indicies: Vec<_> = self.line.match_indices(TAG_LINE).collect();
-        let tag_line_len = TAG_LINE.len();
-        if indicies.len() > 0 {
-            let first_index = indicies[0].0;
-            let begin = first_index + tag_line_len;
-            let mut tag = String::new();
-            for i in begin..self.line.len() {
-                tag.push(self.line.chars().nth(i).unwrap());
-            }
-
-            tag = tag.trim().to_string();
-            if tag.is_empty() {
-                return None;
-            }
-            return Some(tag);
-        }
-
-        None
-    }
-
-    pub fn is_comment_line(&self) -> bool {
-        self.line.starts_with("--")
-    }
-
-    pub fn is_query_string(&self) -> bool {
-        !self.is_empty() && !self.is_comment_line()
-    }
-
-    pub fn is_finishing_query(&self) -> bool {
-        self.is_query_string() && self.line.ends_with(";")
-    }
-}
-
 pub type SQLFileResult<T> = Result<T, SQLFileError>;
 pub type Tag = String;
 
@@ -131,66 +74,6 @@ pub struct SQLFile {
 pub struct QuerySet {
     pub queries: Vec<String>,
     pub hash: String,
-}
-
-struct QueryReadState {
-    queries: Vec<String>,
-    current_query: String,
-    hash: String,
-}
-
-impl QueryReadState {
-    fn new() -> QueryReadState {
-        QueryReadState {
-            queries: vec![],
-            current_query: String::new(),
-            hash: "".to_string(),
-        }
-    }
-
-    fn is_empty(&self) -> bool {
-        self.queries.len() == 0
-    }
-
-    fn has_unfinished_query(&self) -> bool {
-        !self.current_query.is_empty()
-    }
-
-    fn add_query_string(&mut self, st: &str) {
-        if self.current_query.len() > 0 {
-            self.current_query.push_str("\n");
-        }
-        self.current_query.push_str(st);
-    }
-
-    fn finish_query(&mut self, st: &str) {
-        self.add_query_string(st);
-        self.queries.push(self.current_query.clone());
-        self.current_query = String::new();
-    }
-
-    fn compute_hash(mut self) -> Self {
-        let mut all_queries = String::new();
-
-        for query in self.queries.iter() {
-            all_queries.push_str(query);
-        }
-
-        let mut hasher = Sha256::new();
-        hasher.update(all_queries);
-
-        let hash = format!("{:X}", hasher.finalize());
-
-        self.hash = hash;
-        self
-    }
-
-    fn to_query_set(self) -> QuerySet {
-        QuerySet {
-            queries: self.queries,
-            hash: self.hash,
-        }
-    }
 }
 
 impl SQLFile {
@@ -315,6 +198,123 @@ impl SQLFile {
             name: name.to_string(),
             query_hash_map,
         })
+    }
+}
+
+#[derive(Debug)]
+struct FileLine {
+    line: String,
+    original_line: String,
+}
+
+impl FileLine {
+    pub fn new(line: &str) -> FileLine {
+        let new_line = line.trim().to_string();
+        FileLine {
+            line: new_line,
+            original_line: line.to_string(),
+        }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.line.is_empty()
+    }
+
+    pub fn is_tag_name(&self) -> bool {
+        self.line.starts_with("--") && self.line.contains(TAG_LINE)
+    }
+
+    pub fn get_tag_name(&self) -> Option<String> {
+        let indicies: Vec<_> = self.line.match_indices(TAG_LINE).collect();
+        let tag_line_len = TAG_LINE.len();
+        if indicies.len() > 0 {
+            let first_index = indicies[0].0;
+            let begin = first_index + tag_line_len;
+            let mut tag = String::new();
+            for i in begin..self.line.len() {
+                tag.push(self.line.chars().nth(i).unwrap());
+            }
+
+            tag = tag.trim().to_string();
+            if tag.is_empty() {
+                return None;
+            }
+            return Some(tag);
+        }
+
+        None
+    }
+
+    pub fn is_comment_line(&self) -> bool {
+        self.line.starts_with("--")
+    }
+
+    pub fn is_query_string(&self) -> bool {
+        !self.is_empty() && !self.is_comment_line()
+    }
+
+    pub fn is_finishing_query(&self) -> bool {
+        self.is_query_string() && self.line.ends_with(";")
+    }
+}
+
+struct QueryReadState {
+    queries: Vec<String>,
+    current_query: String,
+    hash: String,
+}
+
+impl QueryReadState {
+    fn new() -> QueryReadState {
+        QueryReadState {
+            queries: vec![],
+            current_query: String::new(),
+            hash: "".to_string(),
+        }
+    }
+
+    fn is_empty(&self) -> bool {
+        self.queries.len() == 0
+    }
+
+    fn has_unfinished_query(&self) -> bool {
+        !self.current_query.is_empty()
+    }
+
+    fn add_query_string(&mut self, st: &str) {
+        if self.current_query.len() > 0 {
+            self.current_query.push_str("\n");
+        }
+        self.current_query.push_str(st);
+    }
+
+    fn finish_query(&mut self, st: &str) {
+        self.add_query_string(st);
+        self.queries.push(self.current_query.clone());
+        self.current_query = String::new();
+    }
+
+    fn compute_hash(mut self) -> Self {
+        let mut all_queries = String::new();
+
+        for query in self.queries.iter() {
+            all_queries.push_str(query);
+        }
+
+        let mut hasher = Sha256::new();
+        hasher.update(all_queries);
+
+        let hash = format!("{:X}", hasher.finalize());
+
+        self.hash = hash;
+        self
+    }
+
+    fn to_query_set(self) -> QuerySet {
+        QuerySet {
+            queries: self.queries,
+            hash: self.hash,
+        }
     }
 }
 

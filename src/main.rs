@@ -45,6 +45,7 @@ pub type ApplicationResult<T> = Result<T, ApplicationError>;
 
 #[derive(Debug)]
 pub enum SanityError {
+    GeneralError(String),
     FileNoContainTag(String, String),
     FileQuerySetChanged(String, String),
     FileNoExist(String),
@@ -56,6 +57,9 @@ impl Error for SanityError {}
 impl Display for SanityError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
+            SanityError::GeneralError(error) => {
+                write!(f, "Error occurred while attempting sanity check: {}", error)
+            }
             SanityError::FileNoContainTag(file, tag) => write!(
                 f,
                 "The file {} does not contain the tag {} that was originally migrated",
@@ -149,10 +153,11 @@ impl Osprey {
     fn sanity(
         app_context: &mut AppContext,
         app_arguments: &SanityAppArguments,
-    ) -> ApplicationResult<()> {
+    ) -> Result<(), SanityError> {
         let migration_instances = app_context
             .migration_table
-            .get_migrations(&mut *app_context.database_client)?;
+            .get_migrations(&mut *app_context.database_client)
+            .map_err(|e| SanityError::GeneralError(e.to_string()))?;
 
         for file in app_context.sql_sets.iter() {
             let filtered = migration_instances
@@ -167,26 +172,23 @@ impl Osprey {
                 if let Some(tag_query_set) = file.query_hash_map.get(migration.tag.as_str()) {
                     // see if the query set is unchanged since the last migration
                     if tag_query_set.hash != migration.hash {
-                        return Err(ApplicationError::SanityError(
-                            SanityError::FileQuerySetChanged(
-                                file.name.clone(),
-                                migration.tag.clone(),
-                            ),
+                        return Err(SanityError::FileQuerySetChanged(
+                            file.name.clone(),
+                            migration.tag.clone(),
                         ));
                     }
                 } else {
                     // this file doesn't have the tagged query, return error
-                    return Err(ApplicationError::SanityError(
-                        SanityError::FileNoContainTag(file.name.clone(), migration.tag.clone()),
+                    return Err(SanityError::FileNoContainTag(
+                        file.name.clone(),
+                        migration.tag.clone(),
                     ));
                 }
                 count += 1;
             }
 
             if !app_arguments.ignore_new_files && count == 0 {
-                return Err(ApplicationError::SanityError(SanityError::FileNotMigrated(
-                    file.name.clone(),
-                )));
+                return Err(SanityError::FileNotMigrated(file.name.clone()));
             }
         }
         Ok(())
@@ -196,9 +198,9 @@ impl Osprey {
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
 struct Args {
-    #[clap(short, long, default_value = "_migrations")]
+    #[clap(short, long, default_value = "./migrations/")]
     migrations_directory: String,
-    #[clap(short = 't', long, default_value = "./migrations/")]
+    #[clap(short = 't', long, default_value = "_migrations")]
     migrations_table: String,
     #[clap(short = 'g', long, default_value = "up")]
     tag: String,

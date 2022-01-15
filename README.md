@@ -1,29 +1,43 @@
-# Overview
+# Osprey
 
-# 
-* Change Directory's instances from string/Pathbuf to AsRef<Path>
+A database migrator tool written in Rust inspired by [sql-migrate](https://github.com/rubenv/sql-migrate) 
 
+## In Progress!
 
+This project is currently in progress and testing is on going. Code coverage will grow as time passes.
 
-Command line examples:
+## Features
 
+* A CLI tool that's easily used in a container
+* Currently only supports Postgres
+* Ability to "tag" sets of queries in sql files, use osprey to run all of query sets of specific tag in order
+	* This gives the ability to "rollback" a migration
+* "Sanity" checks to check the current migration state and make sure sql files have not changed since.
 
-migrate:
+## Command Line Help
 
-osprey migrate table <table> directory <directory> up <up> down <down>
+```
+USAGE:
+    osprey [OPTIONS]
 
-directory - the directory of where the sql files to migrate are, default is "./migrations"
+OPTIONS:
+    -g, --tag <TAG>                                      [default: up]
+    -h, --help                                           Print help information
+    -i, --ignore-new-files
+    -m, --migrations-directory <MIGRATIONS_DIRECTORY>    [default: ./migrations/]
+    -r, --run <RUN>                                      [default: migrate]
+    -t, --migrations-table <MIGRATIONS_TABLE>            [default: _migrations]
+    -V, --version                                        Print version information
+```
 
-table - the table name of where to store migration information, default will be "____migrations___" 
+## Postres Configurations
 
- up - the key for the queries to migrate up, if there is a missing key in a new file then it'll exit
-   - Required for migrations
-   
- down - the key for the queries to migrate down if the up query fails
-   - if this isn't provided then app will exit upon first up query fail
-   - if one is provided and an sql file doesn't have one then the app will exit if the up query fails
-   - if one is provided and an sql file does have one then the that query will execute if the up query fails
+Osprey will read postgres configuration information from the environment variables. These match the exact environment variables that Postgres expects.
 
-
-sanity:
+```
+POSTGRES_HOST
+POSTGRES_PASSWORD
+POSTGRES_USER
+POSTGRES_DB
+```
 
