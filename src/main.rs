@@ -116,11 +116,7 @@ impl Osprey {
             // see if this file has a query set with the given tag
             if let Some(up_query) = file.query_hash_map.get(app_arguments.up_key.as_str()) {
                 // see if this migration set has already happened
-                if migration_instances
-                    .iter()
-                    .find(|x| x.name == file.name)
-                    .is_some()
-                {
+                if migration_instances.iter().any(|x| x.name == file.name) {
                     continue;
                 }
 

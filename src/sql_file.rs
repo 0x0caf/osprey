@@ -138,7 +138,7 @@ impl SQLFile {
                 }
 
                 if !tag_name.is_empty() && !current_query_set.is_empty() {
-                    let query_set = current_query_set.compute_hash().to_query_set();
+                    let query_set = current_query_set.compute_hash().into_query_set();
                     query_hash_map.insert(tag_name, query_set);
                     current_query_set = QueryReadState::new();
                 }
@@ -192,7 +192,7 @@ impl SQLFile {
             ));
         }
 
-        let query_set = current_query_set.compute_hash().to_query_set();
+        let query_set = current_query_set.compute_hash().into_query_set();
         query_hash_map.insert(tag_name, query_set);
         Ok(SQLFile {
             name: name.to_string(),
@@ -310,7 +310,7 @@ impl QueryReadState {
         self
     }
 
-    fn to_query_set(self) -> QuerySet {
+    fn into_query_set(self) -> QuerySet {
         QuerySet {
             queries: self.queries,
             hash: self.hash,
