@@ -54,10 +54,10 @@ impl fmt::Display for SQLFileError {
 
 #[derive(Debug)]
 pub enum SanityError {
-    FileNoContainTag(String, String),
-    FileQuerySetChanged(String, String),
-    FileNoExist(String),
-    FileNotMigrated(String),
+    NoContainTag(String, String),
+    QuerySetChanged(String, String),
+    NoExist(String),
+    NotMigrated(String),
 }
 
 impl Error for SanityError {}
@@ -65,22 +65,22 @@ impl Error for SanityError {}
 impl Display for SanityError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            SanityError::FileNoContainTag(file, tag) => write!(
+            SanityError::NoContainTag(file, tag) => write!(
                 f,
                 "The file {} does not contain the tag {} that was originally migrated",
                 file, tag
             ),
-            SanityError::FileQuerySetChanged(file, tag) => write!(
+            SanityError::QuerySetChanged(file, tag) => write!(
                 f,
                 "The file {} has changed since it was last migrated with the tag {}",
                 file, tag
             ),
-            SanityError::FileNoExist(file) => write!(
+            SanityError::NoExist(file) => write!(
                 f,
                 "The file {} does not exist but exists in the migration table",
                 file
             ),
-            SanityError::FileNotMigrated(file) => {
+            SanityError::NotMigrated(file) => {
                 write!(f, "The file {} does not exist in the migration table", file)
             }
         }

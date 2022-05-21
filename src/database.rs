@@ -58,7 +58,7 @@ pub struct PostgresClient {
 
 impl PostgresClient {
     pub fn new(config: &PostgresConfiguration) -> Result<PostgresClient, OspreyError> {
-        let client = Client::connect(config.get_url().as_str(), NoTls)?;
+        let client = Client::connect(&config.get_url(), NoTls)?;
         Ok(PostgresClient { client })
     }
 }

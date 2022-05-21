@@ -68,7 +68,7 @@ impl SQLFile {
     {
         if let Some(filename) = Self::file_stem(&path) {
             if let Ok(st) = fs::read_to_string(path) {
-                return Self::new_from_string(filename.as_str(), st.as_str());
+                return Self::new_from_string(&filename, &st);
             }
 
             return Err(SQLFileError::CouldNoReadFile);
@@ -102,7 +102,7 @@ impl SQLFile {
                     return SyntaxErrorMessage::QueryGivenNoTag.to_err(line_count);
                 }
 
-                current_query_set.finish_query(file_line.original_line.as_str());
+                current_query_set.finish_query(&file_line.original_line);
                 continue;
             }
 
@@ -138,7 +138,7 @@ impl SQLFile {
             }
 
             if file_line.is_query_string() {
-                current_query_set.add_query_string(file_line.original_line.as_str());
+                current_query_set.add_query_string(&file_line.original_line);
             }
             line_count += 1;
         }

@@ -61,7 +61,7 @@ impl<'a> MigrationRecordStorage for DatabaseMigrationRecordStorage<'a> {
             self.table_name
         );
 
-        self.database_client.batch_execute(query.as_str())?;
+        self.database_client.batch_execute(&query)?;
         Ok(())
     }
 
@@ -80,7 +80,7 @@ impl<'a> MigrationRecordStorage for DatabaseMigrationRecordStorage<'a> {
             self.table_name, name, hash, tag
         );
 
-        self.database_client.batch_execute(query.as_str())?;
+        self.database_client.batch_execute(&query)?;
 
         Ok(())
     }
@@ -91,7 +91,7 @@ impl<'a> MigrationRecordStorage for DatabaseMigrationRecordStorage<'a> {
             self.table_name, tag
         );
 
-        let rows = self.database_client.query_row(query.as_str())?;
+        let rows = self.database_client.query_row(&query)?;
 
         let instances = rows
             .iter()
@@ -104,7 +104,7 @@ impl<'a> MigrationRecordStorage for DatabaseMigrationRecordStorage<'a> {
     fn get_all_records(&mut self) -> Result<Vec<MigrationInstance>, OspreyError> {
         let query = format!("SELECT index, name, tag, hash, FROM {}", self.table_name);
 
-        let rows = self.database_client.query_row(query.as_str())?;
+        let rows = self.database_client.query_row(&query)?;
 
         let instances = rows
             .iter()

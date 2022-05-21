@@ -39,15 +39,14 @@ impl Osprey {
         let mut migrations = Migrations::new(app_context.record_storage)?;
 
         // grab previous migrations with up tag
-        let migration_instances =
-            migrations.get_migrations_by_tag(app_arguments.up_key.as_str())?;
+        let migration_instances = migrations.get_migrations_by_tag(&app_arguments.up_key)?;
 
         let mut executed_query_sets = 0;
         let mut executed_queries = 0;
 
         for file in app_context.sql_sets.iter() {
             // see if this file has a query set with the given tag
-            if let Some(up_query) = file.query_hash_map.get(app_arguments.up_key.as_str()) {
+            if let Some(up_query) = file.query_hash_map.get(&app_arguments.up_key) {
                 // see if this migration set has already happened
                 if migration_instances.iter().any(|x| x.name == file.name) {
                     continue;
@@ -60,11 +59,7 @@ impl Osprey {
                 executed_query_sets += 1;
 
                 // record migration
-                migrations.add_migration(
-                    up_query.hash.as_str(),
-                    file.name.as_str(),
-                    app_arguments.up_key.as_str(),
-                )?;
+                migrations.add_migration(&up_query.hash, &file.name, &app_arguments.up_key)?;
             }
         }
 
@@ -88,17 +83,18 @@ impl Osprey {
             // see if this migration set has already happened
             for migration in filtered {
                 // check if this file still has the tagged query used in this migration instance
-                if let Some(tag_query_set) = file.query_hash_map.get(migration.tag.as_str()) {
-                    // see if the query set is unchanged since the last migration
-                    if tag_query_set.hash != migration.hash {
-                        return Err(SanityError::FileQuerySetChanged(
-                            file.name.clone(),
-                            migration.tag.clone(),
-                        ));
-                    }
-                } else {
-                    // this file doesn't have the tagged query, return error
-                    return Err(SanityError::FileNoContainTag(
+                let maybe_query_set = file.query_hash_map.get(&migration.tag);
+
+                // this file doesn't have the tagged query, return error
+                if maybe_query_set.is_none() {
+                    return Err(SanityError::NoContainTag(
+                        file.name.clone(),
+                        migration.tag.clone(),
+                    ));
+                }
+                // see if the query set is unchanged since the last migration
+                if maybe_query_set.unwrap().hash != migration.hash {
+                    return Err(SanityError::QuerySetChanged(
                         file.name.clone(),
                         migration.tag.clone(),
                     ));
@@ -107,7 +103,7 @@ impl Osprey {
             }
 
             if !ignore_new_files && count == 0 {
-                return Err(SanityError::FileNotMigrated(file.name.clone()));
+                return Err(SanityError::NotMigrated(file.name.clone()));
             }
         }
 
@@ -121,7 +117,7 @@ impl Osprey {
                 }
             }
             if !found {
-                return Err(SanityError::FileNoExist(instance.name.clone()));
+                return Err(SanityError::NoExist(instance.name.clone()));
             }
         }
         Ok(())
@@ -150,9 +146,9 @@ struct Args {
     migrations_directory: String,
     #[clap(short = 't', long, default_value = "_migrations")]
     migrations_table: String,
-    #[clap(short = 'g', long, default_value = "up")]
+    #[clap(short = 'a', long, default_value = "up")]
     tag: String,
-    #[clap(short = 'r', long, default_value = "migrate")]
+    #[clap(short = 'r', long, default_value = "sanity")]
     run: String,
     #[clap(short = 'i', long)]
     ignore_new_files: bool,
@@ -168,8 +164,7 @@ fn main() -> Result<(), OspreyError> {
     let db_name = Env::get_value_or_default("POSTGRES_DB", "postgres");
 
     // read all .sql files in the directory, parse them
-    let directory_files =
-        Directory::new(args.migrations_directory.as_str())?.get_file_list("sql")?;
+    let directory_files = Directory::new(&args.migrations_directory)?.get_file_list("sql")?;
     let mut all_query_sets = vec![];
     for file in directory_files {
         let f = SQLFile::new_from_file(&file)?;
@@ -184,7 +179,7 @@ fn main() -> Result<(), OspreyError> {
 
     let mut dbclient = PostgresClient::new(&postgres_configuration)?;
     let mut db_record_storage =
-        DatabaseMigrationRecordStorage::new(args.migrations_table.as_str(), &mut dbclient);
+        DatabaseMigrationRecordStorage::new(&args.migrations_table, &mut dbclient);
 
     let mut app_context = AppContext {
         record_storage: &mut db_record_storage,
