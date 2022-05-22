@@ -11,3 +11,4 @@ quick-error = "2.0.1"
 postgres = "0.19.1"
 sha2 = "0.9.8"
 clap = { version = "3.0.6", features = ["derive"] }
+

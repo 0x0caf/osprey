@@ -1,4 +1,10 @@
-use postgres::{Client, Error, NoTls, Row};
+use crate::error::OspreyError;
+use postgres::{Client, NoTls, Row};
+
+pub trait DatabaseClient {
+    fn batch_execute(&mut self, query: &str) -> Result<(), OspreyError>;
+    fn query_row(&mut self, query: &str) -> Result<Vec<Row>, OspreyError>;
+}
 
 #[derive(Debug)]
 pub struct PostgresConfiguration {
@@ -46,31 +52,25 @@ impl PostgresConfiguration {
     }
 }
 
-pub trait DatabaseClient {
-    fn batch_execute(&mut self, query: &str) -> Result<(), Error>;
-    fn query_row(&mut self, query: &str) -> Result<Vec<Row>, Error>;
-}
-
 pub struct PostgresClient {
     client: Client,
 }
 
 impl PostgresClient {
-    pub fn new(config: &PostgresConfiguration) -> Result<PostgresClient, Error> {
-        let client = Client::connect(config.get_url().as_str(), NoTls)?;
+    pub fn new(config: &PostgresConfiguration) -> Result<PostgresClient, OspreyError> {
+        let client = Client::connect(&config.get_url(), NoTls)?;
         Ok(PostgresClient { client })
     }
-
-    pub fn boxed(self) -> Box<PostgresClient> {
-        Box::new(self)
-    }
 }
+
 impl DatabaseClient for PostgresClient {
-    fn batch_execute(&mut self, query: &str) -> Result<(), Error> {
-        self.client.batch_execute(query)
+    fn batch_execute(&mut self, query: &str) -> Result<(), OspreyError> {
+        self.client.batch_execute(query)?;
+        Ok(())
     }
 
-    fn query_row(&mut self, query: &str) -> Result<Vec<Row>, Error> {
-        self.client.query(query, &[])
+    fn query_row(&mut self, query: &str) -> Result<Vec<Row>, OspreyError> {
+        let result = self.client.query(query, &[])?;
+        Ok(result)
     }
 }
