@@ -24,7 +24,10 @@ impl Directory {
     pub fn get_file_list(&self, extension: &str) -> Result<Vec<PathBuf>, OspreyError> {
         let mut list = vec![];
 
-        let entries = self.visit_files()?;
+        let entries = fs::read_dir(&self.path)?
+            .map(|res| res.map(|e| e.path()))
+            .collect::<Result<Vec<PathBuf>, io::Error>>()?;
+
         for entry in entries {
             let file_extension = entry
                 .extension()
@@ -36,13 +39,5 @@ impl Directory {
         }
 
         Ok(list)
-    }
-
-    fn visit_files(&self) -> io::Result<Vec<PathBuf>> {
-        let entries = fs::read_dir(&self.path)?
-            .map(|res| res.map(|e| e.path()))
-            .collect::<Result<Vec<PathBuf>, io::Error>>()?;
-
-        Ok(entries)
     }
 }
